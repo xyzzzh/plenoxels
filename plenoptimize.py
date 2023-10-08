@@ -12,7 +12,8 @@ np.random.seed(0)
 def get_freer_gpu():
     os.system('nvidia-smi -q -d Memory |grep -A4 GPU|grep Free >tmp')
     memory_available = [int(x.split()[2]) for x in open('tmp', 'r').readlines()]
-    return np.argmax(memory_available)
+    # return np.argmax(memory_available)
+    return 0
 
 gpu = get_freer_gpu()
 os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
@@ -22,7 +23,7 @@ print(f'gpu is {gpu}')
 import jax
 import jax.numpy as jnp
 import plenoxel
-from jax.ops import index, index_update, index_add
+# from jax.ops import index, index_update, index_add
 from jax.lib import xla_bridge
 print(xla_bridge.get_backend().platform)
 if __name__ != "__main__":
@@ -35,7 +36,7 @@ flags = ArgumentParser()
 flags.add_argument(
     "--data_dir", '-d',
     type=str,
-    default='./nerf/data/nerf_synthetic/',
+    default='/home/xyz/data/NeRF_Data/nerf_synthetic/',
     help="Dataset directory e.g. nerf_synthetic/"
 )
 flags.add_argument(
@@ -347,15 +348,24 @@ def run_test_step(i, data_dict, test_c2w, test_gt, H, W, focal, FLAGS, key, name
     return tpsnr
 
 
-def update_grid(old_grid, lr, grid_grad):
-    return index_add(old_grid, index[...], -1 * lr * grid_grad)
+# def update_grid(old_grid, lr, grid_grad):
+#     return index_add(old_grid, index[...], -1 * lr * grid_grad)
+#
+#
+# def update_grids(old_grid, lrs, grid_grad):
+#     for i in range(len(old_grid)):
+#         old_grid[i] = index_add(old_grid[i], index[...], -1 * lrs[i] * grid_grad[i])
+#     return old_grid
 
+def update_grid(old_grid, lr, grid_grad):
+    return old_grid.at[...].add(-1 * lr * grid_grad)
 
 def update_grids(old_grid, lrs, grid_grad):
+    updated_grid = []
     for i in range(len(old_grid)):
-        old_grid[i] = index_add(old_grid[i], index[...], -1 * lrs[i] * grid_grad[i])
-    return old_grid
-
+        grid = jax.numpy.array(old_grid[i])  # Convert individual grid to JAX ndarray
+        updated_grid.append(grid.at[...].add(-1 * lrs[i] * grid_grad[i]))
+    return updated_grid
 
 if FLAGS.physical_batch_size is not None:
     print(f'precomputing all the training rays')

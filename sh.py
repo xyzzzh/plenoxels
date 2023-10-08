@@ -57,7 +57,11 @@ C4 = [
     0.6258357354491761,
 ]
 
-@jax.partial(jax.jit, static_argnums=(0,))
+# @jax.partial(jax.jit, static_argnums=(0,))
+
+from functools import partial
+
+@partial(jax.jit, static_argnums=(0,))
 def eval_sh(deg, sh, dirs):
     """
     Evaluate spherical harmonics at unit directions
